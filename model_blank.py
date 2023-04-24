@@ -21,7 +21,10 @@ def new_gelu(x):
     Implementation of the GELU activation function currently in Google BERT repo (identical to OpenAI GPT).
     Reference: Gaussian Error Linear Units (GELU) paper: https://arxiv.org/abs/1606.08415
     """
-    ### Reference the linked paper and return the approximation for GELU
+    #############################################################################
+    # TODO: Implement the GeLU activation functions.                            #
+    # Hint: Use the reference paper, your implementation should be one line.    #
+    #############################################################################
     return ...
 
 class LayerNorm(nn.Module):
@@ -33,7 +36,11 @@ class LayerNorm(nn.Module):
         self.bias = nn.Parameter(torch.zeros(ndim)) if bias else None
 
     def forward(self, input):
-        ### Finish the layer_norm() function call with the proper parameters to complete the forward pass. Use 1e-5 for the last parameter.
+        #############################################################################
+        # TODO: Finish the layer_norm() function call with the proper parameters to #
+        # complete the forward pass.                                                #
+        # Hint: Use 1e-5 for the last parameter.                                    #
+        #############################################################################
         return F.layer_norm(...)
 
 class CausalSelfAttention(nn.Module):
@@ -61,11 +68,13 @@ class CausalSelfAttention(nn.Module):
 
     def forward(self, x):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
-
-        # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        ### ----fill in with hints---
+        #############################################################################
+        # TODO: Calculate query, key, values for all heads in batch and move head   #
+        # forward to be the batch dimension.                                        #
+        # Hint: Use self.c_atten. k, q, and v should be shape (B, nh, T, hs).       #
+        #############################################################################
         q, k, v  = ...
-        k = k.view(...).transpose(...) # (B, nh, T, hs)
+        k = k.view(...).transpose(...)
         q = ...
         v = ...
 
@@ -133,6 +142,7 @@ class GPT(nn.Module):
         assert config.block_size is not None
         self.config = config
 
+        
         self.transformer = nn.ModuleDict(dict(
             ### word_token_embedding
             wte = nn.Embedding(...),
