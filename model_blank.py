@@ -37,11 +37,11 @@ class LayerNorm(nn.Module):
 
     def forward(self, input):
         #############################################################################
-        # TODO: Finish the layer_norm() function call with the proper parameters to #
-        # complete the forward pass.                                                #
-        # Hint: Use 1e-5 for the last parameter.                                    #
+        # TODO: Find the appropriate PyTorch method and proper parameters to        #
+        #       complete the forward pass. Use 1e-5 for the last parameter.         #
+        # Hint: The torch.nn functional module has already been imported as F.      #
         #############################################################################
-        return F.layer_norm(...)
+        return ...
 
 class CausalSelfAttention(nn.Module):
 
@@ -67,16 +67,41 @@ class CausalSelfAttention(nn.Module):
                                         .view(1, 1, config.block_size, config.block_size))
 
     def forward(self, x):
+        """
+        The forward pass of causal self-attention involves computing attention scores between each 
+        token in a sequence and all other tokens in the same sequence, including itself, but only 
+        considering the past tokens and the current token, not future ones.
+        
+        The main steps in the forward pass are:
+        1. Compute the query, key, and value vectors: These are the three vectors that are used to 
+            compute the attention scores. They are obtained by linearly transforming the input sequence, 
+            where the query vector is used to score the relevance of each key vector.
+        2. Compute the attention scores: The attention scores are computed by taking the dot product of the 
+            query vector with each key vector and scaling the result by the square root of the dimensionality 
+            of the key vector. This produces a raw score that is then masked so that the model can only attend 
+            to the current and past tokens, not future ones.
+        3. Normalize the attention scores: The masked attention scores are then normalized using the softmax 
+            function, which produces a set of weights that represent the importance of each token in the sequence 
+            relative to the current token.
+        4. Compute the weighted sum: Finally, the weighted sum of the value vectors is computed using the 
+            attention weights obtained in the previous step. This produces a single vector that summarizes the 
+            most important information in the sequence relative to the current token.
+        """
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
         #############################################################################
-        # TODO: Calculate query, key, values for all heads in batch and move head   #
-        # forward to be the batch dimension.                                        #
-        # Hint: Use self.c_atten. k, q, and v should be shape (B, nh, T, hs).       #
+        # TODO:                                                                     #
+        #       Step 1: Calculate query, key, values for all heads in batch and     #
+        #       move head forward to be the batch dimension.                        #
+        # Hint: Read through the init method to see which function you have to      #
+        #       compute these. Keep in mind that you want three separate values.    #
+        #       Check out the PyTorch .split() method and set dim=2.                #
         #############################################################################
         q, k, v  = ...
-        k = k.view(...).transpose(...)
-        q = ...
-        v = ...
+        
+        ### Next transform each tensor to have shape # (B, nhead, T, hs)
+        k = k.view(..., ..., ..., C // self.n_head).transpose(1, 2) # (B, nhead, T, hs)
+        q = ... # (B, nhead, T, hs)
+        v = ... # (B, nhead, T, hs)
 
         # causal self-attention; Self-attend: (B, nh, T, hs) x (B, nh, hs, T) -> (B, nh, T, T)
         if self.flash:
@@ -84,10 +109,15 @@ class CausalSelfAttention(nn.Module):
             y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None, dropout_p=self.dropout if self.training else 0, is_causal=True)
         else:
             # manual implementation of attention
-            att = (q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1)))
+            
+            ### TODO: Step 2: attention scores
+            scaling_factor = ...
+            att = (q @ k.transpose(-2, -1)) * scaling_factor
             att = att.masked_fill(self.bias[:,:,:T,:T] == 0, float('-inf'))
-            att = F.softmax(att, dim=-1)
+            ### TODO: Step 3: normalize scores
+            att = ...
             att = self.attn_dropout(att)
+            ### TODO: Step 4: compute the weighted sum
             y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
 
@@ -142,9 +172,15 @@ class GPT(nn.Module):
         assert config.block_size is not None
         self.config = config
 
+        #############################################################################
+        # The GPT class is initialized using the passed in config.                  #
+        # TODO: Complete the transformer dictionary with the needed embeddings,     #
+        # dropout, hidden layers and layer norm. Examine the GPTConfig class to     #
+        # investigate the relevant variable names and values.                       #
+        #############################################################################
         
         self.transformer = nn.ModuleDict(dict(
-            ### word_token_embedding
+            ### word_token_embedding, hint: 
             wte = nn.Embedding(...),
             ### word_position_embedding
             wpe = nn.Embedding(...),
@@ -193,24 +229,46 @@ class GPT(nn.Module):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
 
     def forward(self, idx, targets=None):
+        """
+        Steps of the forward pass of GPT:
+        1. Input Encoding: The forward pass starts with encoding the input sequence of text into a set of 
+            fixed-length vectors called embeddings. GPT uses byte-pair encoding (BPE) to convert the raw 
+            text into a sequence of tokens (this part is already handled through OpenAI's module in 
+            train.py - you don't need to worry about it), and then uses an embedding layer to map each 
+            token to a vector representation.
+        2. Positional Encoding: In addition to the token embeddings, GPT also uses positional embeddings 
+            to encode the position of each token in the sequence. This helps the model understand the 
+            order and structure of the input text.
+        3. Transformer Layers: The core of GPT is a series of transformer layers. Each layer consists of 
+            a few sub-layers including: a multi-head self-attention mechanism and a feedforward neural 
+            network along with some layer normalizations. The self-attention mechanism allows the model 
+            to attend to different parts of the input sequence and identify important relationships 
+            between tokens.
+        4. Layer Normalization: After each sub-layer in the transformer, GPT uses layer normalization to 
+            normalize the output and ensure that the activations have zero mean and unit variance.
+        5. Output Projection: Finally, the output of the last transformer layer is projected onto a 
+            vocabulary of tokens using a linear projection layer. This produces a probability distribution 
+            over the next token in the sequence, which can be sampled to generate new text.
+        """
         device = idx.device
         b, t = idx.size()
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
 
-        ### forward the GPT model itself
+        # forward the GPT model itself
         
-        # token embeddings of shape (b, t, n_embd)
+        ### Step 1: token embeddings of shape (b, t, n_embd)
+        ...
+        ### Step 2: position embeddings of shape (1, t, n_embd)
+        ...
         
-        # position embeddings of shape (1, t, n_embd)
-        
-        # iterate through the attention blocks defined in __init__, don't forget dropout and layer norm steps at the appropriate times.
-        
+        x = self.transformer.drop(tok_emb + pos_emb)
+        ### Step 3, 4: iterate through the attention blocks defined in __init__, don't forget dropout and layer norm steps at the appropriate times.
+        ...
 
         if targets is not None:
-            # if we are given some desired targets also calculate the loss
-            logits = self.lm_head(x)
-            
+            ### Step 5: if we are given some desired targets also calculate the loss
+            logits = ...
             loss_fn = ...
             loss = loss_fn(logits.view(-1, logits.size(-1)), targets.view(-1), ignore_index=-1)
         else:
