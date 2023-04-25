@@ -255,7 +255,10 @@ class GPT(nn.Module):
         assert t <= self.config.block_size, f"Cannot forward sequence of length {t}, block size is only {self.config.block_size}"
         pos = torch.arange(0, t, dtype=torch.long, device=device).unsqueeze(0) # shape (1, t)
 
-        # forward the GPT model itself
+        
+        #############################################################################
+        # TODO: implement the forward                                               #
+        #############################################################################
         
         ### Step 1: token embeddings of shape (b, t, n_embd)
         ...
