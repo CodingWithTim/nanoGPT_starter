@@ -89,14 +89,13 @@ class CausalSelfAttention(nn.Module):
         """
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
         #############################################################################
-        # TODO:                                                                     #
-        #       Step 1: Calculate query, key, values for all heads in batch and     #
-        #       move head forward to be the batch dimension.                        #
-        # Hint: Read through the init method to see which function you have to      #
-        #       compute these. Keep in mind that you want three separate values.    #
-        #       Check out the PyTorch .split() method and set dim=2.                #
+        # The first step to generate query, key, values for all heads in batch and  #
+        # move head forward to be the batch dimension is done for you.              #
+        # TODO: Reshape the key, query and value variables to have the specified    #
+        #       size. This allows a dot product operation to be properly computed   #
+        #       later on in the second step.                                        #
         #############################################################################
-        q, k, v  = ...
+        q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
         
         ### Next transform each tensor to have shape # (B, nhead, T, hs)
         k = k.view(..., ..., ..., C // self.n_head).transpose(1, 2) # (B, nhead, T, hs)
@@ -118,7 +117,7 @@ class CausalSelfAttention(nn.Module):
             att = ...
             att = self.attn_dropout(att)
             ### TODO: Step 4: compute the weighted sum
-            y = att @ v # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
+            y = ... # (B, nh, T, T) x (B, nh, T, hs) -> (B, nh, T, hs)
         y = y.transpose(1, 2).contiguous().view(B, T, C) # re-assemble all head outputs side by side
 
         # output projection
@@ -267,6 +266,9 @@ class GPT(nn.Module):
         
         x = self.transformer.drop(tok_emb + pos_emb)
         ### Step 3, 4: iterate through the attention blocks defined in __init__, don't forget dropout and layer norm steps at the appropriate times.
+        ...
+        for ... in ...:
+          ...
         ...
 
         if targets is not None:
